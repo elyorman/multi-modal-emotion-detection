@@ -122,8 +122,8 @@ def _load_text_dataset(path):
         y_test = pickle.load(f)
     return X_train, y_train, X_test, y_test
 
-X_train, y_train, X_test, y_test = _load_text_dataset('training_data/text/')
-print(np.array(X_train), np.array(y_train)[0])
+X_train_text, y_train_text, X_test_text, y_test_text = _load_text_dataset('training_data/text/')
+print(np.array(X_train_text), np.array(y_train_text)[0])
 
 
 class train:
@@ -411,7 +411,8 @@ class train:
         y = Dense(256, activation="relu")(y)
         y = Dense(128, activation="relu")(y)
         attention = y
-        ### TEXT DATA (VEDIO) NETWORK 2
+        
+        ### TEXT DATA (TEXT) NETWORK 2
 
         Input_words = Input(shape=(300,), name='input2')
         x = Embedding(len(train_word_index) + 1, self.embed_dim, weights=[train_embedding_weights],
@@ -438,10 +439,10 @@ class train:
         x = LSTM(self.lstm_out, dropout=self.dropout_lstm, recurrent_dropout=self.recurrent_dropout_lstm)(x)
         x = Dense(128, activation='softmax')(x)
 
-        x = attention + x  # Attention two Network
+        x = attention + x  # JOIN NETWORK (Attention two Network)
 
         out = Dense(5, activation='softmax')(x)
-        classifier = Model(inputs=[Input_images, Input_words], outputs=[out])
+        classifier = Model(inputs=[Input_words,Input_images], outputs=[out])
         classifier.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(classifier.summary())
 
@@ -471,4 +472,4 @@ class train:
 
         return model
 
-model = train(X_train).run(X_train,X_train_image, y_train, "Personality_traits_NN")
+model = train(X_train_text).run(X_train_text,X_train_image, y_train_text, "Personality_traits_NN")
