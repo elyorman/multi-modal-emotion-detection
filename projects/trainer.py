@@ -393,17 +393,17 @@ class train:
         y = Conv2D(filters=128, kernel_size=1, padding='same', activation='relu', strides=2)(y)
 
         # Block - 2
-        y = Conv2D(filters=128, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
         y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
         y = Conv2D(filters=256, kernel_size=1, padding='same', activation='relu', strides=2)(y)
 
         # Block - 3
-        y = Conv2D(filters=256, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D( kernel_size=3, padding='same', activation='relu')(y)
         y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
         y = Conv2D(filters=256, kernel_size=1, padding='same', activation='relu', strides=2)(y)
 
         # Block - 4
-        y = Conv2D(filters=512, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
         y = DepthwiseConv2D( kernel_size=3, padding='same', activation='relu')(y)
         y = Conv2D(filters=512, kernel_size=1, padding='same', activation='relu', strides=2)(y)
         y =  Flatten()(y)
@@ -411,7 +411,7 @@ class train:
         y = Dense(256, activation="relu")(y)
         y = Dense(128, activation="relu")(y)
         attention = y
-        
+
         ### TEXT DATA (TEXT) NETWORK 2
 
         Input_words = Input(shape=(300,), name='input2')
@@ -444,6 +444,8 @@ class train:
         out = Dense(5, activation='softmax')(x)
         classifier = Model(inputs=[Input_words,Input_images], outputs=[out])
         classifier.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        tf.keras.utils.plot_model(classifier, to_file='model.png', show_shapes=True)
+
         print(classifier.summary())
 
         # Loading pretrained model for transfer learning
