@@ -22,7 +22,7 @@ from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, SeparableConv2D
-from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D, SeparableConv2D, ZeroPadding2D, UpSampling2D, BatchNormalization, Input, GlobalAveragePooling2D, AveragePooling2D
+from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten,DepthwiseConv2D, Conv2D, MaxPooling2D, SeparableConv2D, ZeroPadding2D, UpSampling2D, BatchNormalization, Input, GlobalAveragePooling2D, AveragePooling2D
 #from tensorflow. keras.utils import np_utils
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers import SGD, RMSprop
@@ -107,8 +107,8 @@ def _load_vedio_dataset(path):
     return X_train, y_train, X_test, y_test
 
 
-# X_train, y_train, X_test, y_test = _load_vedio_dataset('training_data/vedio/')
-# print(X_train.shape, y_train.shape)
+X_train_image, y_train_image, X_test_image, y_test_image = _load_vedio_dataset('training_data/vedio/')
+print(X_train_image.shape, y_train_image.shape)
 
 
 def _load_text_dataset(path):
@@ -356,7 +356,7 @@ class train:
                                         lambda x: train_embedding_weights[train_word_index[x]])))
         return train_embedding_weights, train_word_index, word_vector_dict
 
-    def run(self, X, y, model_name=None, pretrained_weights_path=None, pretrained_model_path=None, verbose=True):
+    def run(self, X, X1, y, model_name=None, pretrained_weights_path=None, pretrained_model_path=None, verbose=True):
         """
         Builds a classifer for the given list of documents and targets
 
@@ -370,7 +370,7 @@ class train:
                 ('preprocessor', self.NLTKPreprocessor),
                 ('classifier', classifier)
             ])
-            return model.fit(X, y)
+            return model.fit([X,X1], y)
 
         # Label encode the targets
         y_trans = y
@@ -383,7 +383,37 @@ class train:
         indices = range(len(y))
 
         # Keras model definition
-        Input_words = Input(shape=(300,), name='input1')
+        Input_images = Input(input_shape=(48,48,1), name='input1')
+
+        ### IMAGE DATA (VEDIO) NETWORK 1
+        #Block - 1
+
+        y = Conv2D(filters=64, kernel_size=3, padding='same', activation='relu')(Input_images)
+        y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
+        y = Conv2D(filters=128, kernel_size=1, padding='same', activation='relu', strides=2)(y)
+
+        # Block - 2
+        y = Conv2D(filters=128, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
+        y = Conv2D(filters=256, kernel_size=1, padding='same', activation='relu', strides=2)(y)
+
+        # Block - 3
+        y = Conv2D(filters=256, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D(kernel_size=3, padding='same', activation='relu')(y)
+        y = Conv2D(filters=256, kernel_size=1, padding='same', activation='relu', strides=2)(y)
+
+        # Block - 4
+        y = Conv2D(filters=512, kernel_size=3, padding='same', activation='relu')(y)
+        y = DepthwiseConv2D( kernel_size=3, padding='same', activation='relu')(y)
+        y = Conv2D(filters=512, kernel_size=1, padding='same', activation='relu', strides=2)(y)
+        y =  Flatten()(y)
+
+        y = Dense(256, activation="relu")(y)
+        y = Dense(128, activation="relu")(y)
+        attention = y
+        ### TEXT DATA (VEDIO) NETWORK 2
+
+        Input_words = Input(shape=(300,), name='input2')
         x = Embedding(len(train_word_index) + 1, self.embed_dim, weights=[train_embedding_weights],
                       input_length=self.max_sentence_len, trainable=True)(Input_words)
         # classifier.add(Embedding(30000, 300,input_length = 350))
@@ -407,8 +437,11 @@ class train:
                  recurrent_dropout=self.recurrent_dropout_lstm)(x)
         x = LSTM(self.lstm_out, dropout=self.dropout_lstm, recurrent_dropout=self.recurrent_dropout_lstm)(x)
         x = Dense(128, activation='softmax')(x)
+
+        x = attention + x  # Attention two Network
+
         out = Dense(5, activation='softmax')(x)
-        classifier = Model(inputs=Input_words, outputs=[out])
+        classifier = Model(inputs=[Input_images, Input_words], outputs=[out])
         classifier.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print(classifier.summary())
 
@@ -428,7 +461,7 @@ class train:
 
         # Save the model
         if model_name:
-            outpath = './Models/'
+            outpath = './models/'
             classifier.save_weights(outpath + model_name + '.h5')
             with open(outpath + model_name + '.json', 'w') as json_file:
                 json_file.write(classifier.to_json())
@@ -438,4 +471,4 @@ class train:
 
         return model
 
-model = train(X_train).run(X_train, y_train, "Personality_traits_NN")
+model = train(X_train).run(X_train,X_train_image, y_train, "Personality_traits_NN")
