@@ -385,7 +385,7 @@ class train:
         # Keras model definition
         Input_images = Input(input_shape=(48,48,1), name='input1')
 
-        ### IMAGE DATA (VEDIO) NETWORK 1
+        ### IMAGE DATA (VIDEO) NETWORK 1
         #Block - 1
 
         y = Conv2D(filters=64, kernel_size=3, padding='same', activation='relu')(Input_images)
